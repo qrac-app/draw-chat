@@ -3,17 +3,32 @@ import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import MessageBubble from './MessageBubble'
 import MessageInput from './MessageInput'
+import type { Id } from '../../convex/_generated/dataModel'
 import { useAuth } from '@/hooks/useAuth'
 
-export default function ChatContainer() {
-  const messages = useQuery(api.messages.list) || []
-  const sendMessage = useMutation(api.messages.send)
-  const [isSending, setIsSending] = useState(false)
+interface ChatContainerProps {
+  chatId?: Id<'chats'>
+}
+
+export default function ChatContainer({ chatId }: ChatContainerProps) {
   const { user } = useAuth()
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [isSending, setIsSending] = useState(false)
 
   // Use authenticated user data or fallback
-  const currentUser = (user as any)?.displayName || 'Anonymous User'
+  const currentUser = user
+
+  // If no chatId provided, use legacy global chat
+  const legacyMessages = useQuery(api.messages.list) || []
+  const chatMessages =
+    useQuery(api.chatMessages.getChatMessages, chatId ? { chatId } : 'skip') ||
+    []
+  const chat = useQuery(api.chats.getChatById, chatId ? { chatId } : 'skip')
+
+  const messages = chatId ? chatMessages : legacyMessages
+  const sendMessage = useMutation(
+    chatId ? api.chatMessages.sendChatMessage : api.messages.send,
+  )
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -27,15 +42,23 @@ export default function ChatContainer() {
     content: string,
     type: 'text' | 'drawing',
   ) => {
-    if (isSending) return
+    if (isSending || !currentUser) return
 
     setIsSending(true)
     try {
-      await sendMessage({
-        content,
-        type,
-        author: currentUser,
-      })
+      if (chatId) {
+        await sendMessage({
+          chatId,
+          content,
+          type,
+        })
+      } else {
+        await sendMessage({
+          content,
+          type,
+          author: currentUser.displayName,
+        })
+      }
     } catch (error) {
       console.error('Failed to send message:', error)
     } finally {
@@ -43,16 +66,46 @@ export default function ChatContainer() {
     }
   }
 
+  const getChatTitle = () => {
+    if (!chatId) return 'Drawing Chat'
+    if (!chat) return 'Chat'
+
+    if (chat.type === 'private' && chat.members.length === 2) {
+      const otherMember = chat.members.find(
+        (member: any) => member.userId !== currentUser?.userId,
+      )
+      return otherMember?.displayName || otherMember?.username || 'Private Chat'
+    }
+
+    return chat.name || 'Group Chat'
+  }
+
+  const getChatSubtitle = () => {
+    if (!chatId) return 'Global chat room'
+    if (!chat) return ''
+
+    if (chat.type === 'group') {
+      return `${chat.members.length} members`
+    }
+
+    return 'Private conversation'
+  }
+
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 shadow-sm">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-gray-800">Drawing Chat</h1>
+          <div>
+            <h1 className="text-xl font-semibold text-gray-800">
+              {getChatTitle()}
+            </h1>
+            <p className="text-sm text-gray-500">{getChatSubtitle()}</p>
+          </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">Logged in as:</span>
             <span className="text-sm font-medium text-blue-600">
-              {currentUser}
+              {currentUser?.displayName || 'Anonymous User'}
             </span>
           </div>
         </div>
@@ -62,20 +115,35 @@ export default function ChatContainer() {
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {messages.length === 0 ? (
           <div className="text-center text-gray-500 mt-8">
-            <p className="text-lg mb-2">Welcome to Drawing Chat!</p>
+            <p className="text-lg mb-2">
+              {chatId ? 'Start the conversation!' : 'Welcome to Drawing Chat!'}
+            </p>
             <p className="text-sm">
               Start by typing a message or drawing something.
             </p>
           </div>
         ) : (
           <div>
-            {messages.map((message: any) => (
-              <MessageBubble
-                key={message._id}
-                message={message}
-                isOwn={message.author === currentUser}
-              />
-            ))}
+            {messages.map((message: any) => {
+              const isOwn = chatId
+                ? message.sender?.userId === currentUser?.userId
+                : message.author === currentUser?.displayName
+
+              return (
+                <MessageBubble
+                  key={message._id}
+                  message={
+                    chatId
+                      ? {
+                          ...message,
+                          author: message.sender?.displayName || 'Unknown',
+                        }
+                      : message
+                  }
+                  isOwn={isOwn}
+                />
+              )
+            })}
             <div ref={messagesEndRef} />
           </div>
         )}
