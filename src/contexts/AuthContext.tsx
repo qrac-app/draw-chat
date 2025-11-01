@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext } from 'react'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
@@ -23,36 +23,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { signIn, signOut } = useAuthActions()
-  const [isLoading, setIsLoading] = useState(true)
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
-  // This is a placeholder - you'll need to implement getting current user ID from Convex auth
-  // For now, we'll simulate it
-  useEffect(() => {
-    // Simulate checking auth state
-    const checkAuth = async () => {
-      try {
-        // Replace with actual auth check
-        // const authUser = await getCurrentUser()
-        // setCurrentUserId(authUser?.id || null)
-        setCurrentUserId(null) // Placeholder
-      } catch (error) {
-        console.error('Auth check failed:', error)
-        setCurrentUserId(null)
-      } finally {
-        setIsLoading(false)
-      }
-    }
+  // Get current user from our custom query
+  const userProfile = useQuery(api.currentUser.currentUser)
 
-    checkAuth()
-  }, [])
-
-  const userProfile = useQuery(
-    api.users.getUserProfile,
-    currentUserId ? { userId: currentUserId } : 'skip',
-  )
-
-  const isAuthenticated = !!currentUserId && !!userProfile
+  const isAuthenticated = !!userProfile
+  const isLoading = userProfile === undefined
 
   const value: AuthContextType = {
     isAuthenticated,

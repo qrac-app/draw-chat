@@ -9,6 +9,7 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as currentUser from "../currentUser.js";
 import type * as http from "../http.js";
 import type * as messages from "../messages.js";
 import type * as todos from "../todos.js";
@@ -30,6 +31,7 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  currentUser: typeof currentUser;
   http: typeof http;
   messages: typeof messages;
   todos: typeof todos;
