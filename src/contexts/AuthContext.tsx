@@ -2,9 +2,10 @@ import React, { createContext, useContext } from 'react'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
+import { Id } from 'convex/_generated/dataModel'
 
 interface User {
-  userId: string
+  userId: Id<'users'>,
   username: string
   displayName: string
   profilePicture?: string
@@ -37,12 +38,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     authData?.profile ||
     (authData
       ? {
-          userId: authData.userId,
-          username: '', // Will be set in profile
-          displayName: authData.name || authData.email,
-          profilePicture: authData.profilePictureUrl,
-          email: authData.email,
-        }
+        userId: authData.userId,
+        username: '', // Will be set in profile
+        displayName: authData.name || authData.email,
+        profilePicture: authData.profilePictureUrl,
+        email: authData.email,
+      }
       : null)
 
   const value: AuthContextType = {

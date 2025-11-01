@@ -6,6 +6,8 @@ import {
   ChevronRight,
   Globe,
   Home,
+  List,
+  LogOut,
   Menu,
   MessageSquare,
   Network,
@@ -13,12 +15,14 @@ import {
   StickyNote,
   X,
 } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [groupedExpanded, setGroupedExpanded] = useState<
     Record<string, boolean>
   >({})
+  const { isAuthenticated, signOut } = useAuth()
 
   return (
     <>
@@ -82,6 +86,19 @@ export default function Header() {
           >
             <MessageSquare size={20} />
             <span className="font-medium">Chat</span>
+          </Link>
+
+          <Link
+            to="/chats"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
+            activeProps={{
+              className:
+                'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
+            }}
+          >
+            <List size={20} />
+            <span className="font-medium">My Chats</span>
           </Link>
 
           {/* Demo Links Start */}
@@ -198,6 +215,19 @@ export default function Header() {
           )}
 
           {/* Demo Links End */}
+
+          {isAuthenticated && (
+            <button
+              onClick={() => {
+                signOut()
+                setIsOpen(false)
+              }}
+              className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-600 transition-colors mb-2 text-white"
+            >
+              <LogOut size={20} />
+              <span className="font-medium">Log Out</span>
+            </button>
+          )}
         </nav>
       </aside>
     </>

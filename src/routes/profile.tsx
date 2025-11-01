@@ -115,7 +115,7 @@ function ProfileComponent() {
   }
 
   const handleSignOut = async () => {
-    await signOut()
+    signOut()
     navigate({ to: '/login' })
   }
 

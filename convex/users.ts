@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 
 export const getUserProfile = query({
-  args: { userId: v.string() },
+  args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query('profiles')
@@ -25,7 +25,7 @@ export const getUserProfileByUsername = query({
 
 export const createOrUpdateProfile = mutation({
   args: {
-    userId: v.string(),
+    userId: v.id("users"),
     username: v.string(),
     displayName: v.string(),
     profilePicture: v.optional(v.string()),

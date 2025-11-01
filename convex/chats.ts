@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
+import { getUserIdfromAuthIdentity } from './auth/utils'
 
 export const createChat = mutation({
   args: {
@@ -16,7 +17,7 @@ export const createChat = mutation({
     // Get current user's profile
     const currentUserProfile = await ctx.db
       .query('profiles')
-      .withIndex('by_userId', (q) => q.eq('userId', identity.subject))
+      .withIndex('by_userId', (q) => q.eq('userId', getUserIdfromAuthIdentity(identity)))
       .first()
 
     if (!currentUserProfile) {
@@ -60,7 +61,7 @@ export const getOrCreatePrivateChat = mutation({
     // Get current user's profile
     const currentUserProfile = await ctx.db
       .query('profiles')
-      .withIndex('by_userId', (q) => q.eq('userId', identity.subject))
+      .withIndex('by_userId', (q) => q.eq('userId', getUserIdfromAuthIdentity(identity)))
       .first()
 
     if (!currentUserProfile) {
@@ -136,7 +137,7 @@ export const getUserChats = query({
     // Get current user's profile
     const currentUserProfile = await ctx.db
       .query('profiles')
-      .withIndex('by_userId', (q) => q.eq('userId', identity.subject))
+      .withIndex('by_userId', (q) => q.eq('userId', getUserIdfromAuthIdentity(identity)))
       .first()
 
     if (!currentUserProfile) {
@@ -196,7 +197,7 @@ export const getChatById = query({
     // Get current user's profile
     const currentUserProfile = await ctx.db
       .query('profiles')
-      .withIndex('by_userId', (q) => q.eq('userId', identity.subject))
+      .withIndex('by_userId', (q) => q.eq('userId', getUserIdfromAuthIdentity(identity)))
       .first()
 
     if (!currentUserProfile) {

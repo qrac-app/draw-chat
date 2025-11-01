@@ -50,7 +50,7 @@ export default defineSchema({
     .index('by_chatId_timestamp', ['chatId', 'timestamp'])
     .index('by_senderId', ['senderId']),
   profiles: defineTable({
-    userId: v.string(),
+    userId: v.id("users"),
     username: v.string(),
     displayName: v.string(),
     profilePicture: v.optional(v.string()),
