@@ -18,10 +18,16 @@ export default function MessageInput({
   )
   const [textMessage, setTextMessage] = useState('')
   const [drawingData, setDrawingData] = useState<string | null>(null)
+  const [userExplicitlyChoseText, setUserExplicitlyChoseText] = useState(false)
 
   // Auto-switch to canvas mode when input is focused and default is canvas
+  // Only auto-switch if user hasn't explicitly chosen text mode
   const handleInputFocus = () => {
-    if (defaultInputMethod === 'canvas' && inputMode === 'text') {
+    if (
+      defaultInputMethod === 'canvas' &&
+      inputMode === 'text' &&
+      !userExplicitlyChoseText
+    ) {
       setInputMode('drawing')
     }
   }
@@ -31,6 +37,8 @@ export default function MessageInput({
     if (textMessage.trim()) {
       onSendMessage(textMessage.trim(), 'text')
       setTextMessage('')
+      // Reset explicit text choice after sending a message
+      setUserExplicitlyChoseText(false)
     }
   }
 
@@ -49,10 +57,12 @@ export default function MessageInput({
   const switchToDrawingMode = () => {
     setInputMode('drawing')
     setDrawingData(null)
+    setUserExplicitlyChoseText(false)
   }
 
   const switchToTextMode = () => {
     setInputMode('text')
+    setUserExplicitlyChoseText(true)
   }
 
   if (inputMode === 'drawing') {
