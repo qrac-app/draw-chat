@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Edit, Send, Type } from 'lucide-react'
 import DrawingCanvas from './DrawingCanvas'
 
@@ -19,6 +19,7 @@ export default function MessageInput({
   const [textMessage, setTextMessage] = useState('')
   const [drawingData, setDrawingData] = useState<string | null>(null)
   const [userExplicitlyChoseText, setUserExplicitlyChoseText] = useState(false)
+  const textInputRef = useRef<HTMLInputElement>(null)
 
   // Auto-switch to canvas mode when input is focused and default is canvas
   // Only auto-switch if user hasn't explicitly chosen text mode
@@ -63,6 +64,10 @@ export default function MessageInput({
   const switchToTextMode = () => {
     setInputMode('text')
     setUserExplicitlyChoseText(true)
+    // Auto-focus the text input when switching to text mode
+    setTimeout(() => {
+      textInputRef.current?.focus()
+    }, 0)
   }
 
   if (inputMode === 'drawing') {
@@ -116,6 +121,7 @@ export default function MessageInput({
       <form onSubmit={handleTextSubmit} className="flex gap-2">
         <div className="flex-1 relative">
           <input
+            ref={textInputRef}
             type="text"
             value={textMessage}
             onChange={(e) => setTextMessage(e.target.value)}
