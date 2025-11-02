@@ -3,6 +3,8 @@ import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useMutation } from 'convex/react'
 import { api } from '../../../../convex/_generated/api'
 import { useAuth } from '@/hooks/useAuth'
+import ChatContainer from '../../../components/ChatContainer'
+import type { Id } from '../../../../convex/_generated/dataModel'
 
 export const Route = createFileRoute('/u/$username/chat')({
   component: UsernameChatComponent,
@@ -14,15 +16,19 @@ function UsernameChatComponent() {
   const { isAuthenticated, hasProfile, isLoading, user } = useAuth()
   const createOrGetPrivateChat = useMutation(api.chats.getOrCreatePrivateChat)
   const [error, setError] = useState<string | null>(null)
+  const [chatId, setChatId] = useState<Id<'chats'> | null>(null)
+  const [isCreatingChat, setIsCreatingChat] = useState(false)
 
   const handleStartChat = async () => {
     try {
-      const chatId = await createOrGetPrivateChat({ otherUsername: username })
-      // Navigate to the actual chat using router
-      router.navigate({ to: '/chat/$chatId', params: { chatId } })
+      setIsCreatingChat(true)
+      const id = await createOrGetPrivateChat({ otherUsername: username })
+      setChatId(id)
     } catch (err) {
       console.error('Failed to start chat:', err)
       setError('Failed to start chat. Please make sure the username exists.')
+    } finally {
+      setIsCreatingChat(false)
     }
   }
 
@@ -33,11 +39,21 @@ function UsernameChatComponent() {
       isAuthenticated &&
       hasProfile &&
       user &&
-      user.username !== username
+      user.username !== username &&
+      !chatId &&
+      !isCreatingChat
     ) {
       handleStartChat()
     }
-  }, [username, isLoading, isAuthenticated, hasProfile, user])
+  }, [
+    username,
+    isLoading,
+    isAuthenticated,
+    hasProfile,
+    user,
+    chatId,
+    isCreatingChat,
+  ])
 
   if (isLoading) {
     return (
@@ -99,12 +115,18 @@ function UsernameChatComponent() {
     )
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500 mx-auto mb-4"></div>
-        <p className="text-gray-600">Starting chat with {username}...</p>
+  // Show loading while creating chat
+  if (isCreatingChat || !chatId) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Starting chat with {username}...</p>
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
+
+  // Render the chat directly
+  return <ChatContainer chatId={chatId} />
 }
