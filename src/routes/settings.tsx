@@ -68,9 +68,7 @@ function SettingsComponent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center px-6">
-      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10"></div>
-
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center px-6">
       <div className="relative max-w-md w-full">
         <div className="text-center mb-8">
           <Settings className="w-12 h-12 text-cyan-400 mx-auto mb-4" />

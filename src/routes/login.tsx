@@ -8,9 +8,7 @@ export const Route = createFileRoute('/login')({
 
 function LoginComponent() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center px-6">
-      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10"></div>
-
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center px-6">
       <div className="relative max-w-md w-full">
         {/* Logo and Title */}
         <div className="text-center mb-8">
