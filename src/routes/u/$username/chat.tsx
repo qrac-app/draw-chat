@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useMutation } from 'convex/react'
 import { api } from '../../../../convex/_generated/api'
-import { useAuth } from '@/hooks/useAuth'
 import ChatContainer from '../../../components/ChatContainer'
 import type { Id } from '../../../../convex/_generated/dataModel'
+import { useAuth } from '@/hooks/useAuth'
+import { useQuery } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
 
 export const Route = createFileRoute('/u/$username/chat')({
   component: UsernameChatComponent,
@@ -14,43 +16,57 @@ function UsernameChatComponent() {
   const { username } = Route.useParams()
   const router = useRouter()
   const { isAuthenticated, hasProfile, isLoading, user } = useAuth()
-  const createOrGetPrivateChat = useMutation(api.chats.getOrCreatePrivateChat)
+  const { data: existingChatId, isLoading: isChatLoading } = useQuery(
+    convexQuery(
+      api.chats.getPrivateChatWithUser, {
+      otherUsername: username,
+    }))
+  const createPrivateChat = useMutation(api.chats.createPrivateChat)
   const [error, setError] = useState<string | null>(null)
   const [chatId, setChatId] = useState<Id<'chats'> | null>(null)
   const [isCreatingChat, setIsCreatingChat] = useState(false)
 
-  const handleStartChat = async () => {
+  const handleCreateChat = async () => {
     try {
       setIsCreatingChat(true)
-      const id = await createOrGetPrivateChat({ otherUsername: username })
+      const id = await createPrivateChat({ otherUsername: username })
       setChatId(id)
     } catch (err) {
-      console.error('Failed to start chat:', err)
-      setError('Failed to start chat. Please make sure the username exists.')
+      console.error('Failed to create chat:', err)
+      setError('Failed to create chat. Please make sure the username exists.')
     } finally {
       setIsCreatingChat(false)
     }
   }
 
-  // Auto-start the chat when component mounts and user is ready
+  // Set chat ID if found via query
+  useEffect(() => {
+    if (existingChatId) {
+      setChatId(existingChatId)
+    }
+  }, [existingChatId])
+
+  // Create chat if not found and user is ready
   useEffect(() => {
     if (
-      !isLoading &&
+      !isChatLoading &&
       isAuthenticated &&
       hasProfile &&
       user &&
       user.username !== username &&
+      existingChatId === undefined && // Query finished loading, no chat found
       !chatId &&
       !isCreatingChat
     ) {
-      handleStartChat()
+      handleCreateChat()
     }
   }, [
     username,
-    isLoading,
+    isChatLoading,
     isAuthenticated,
     hasProfile,
     user,
+    existingChatId,
     chatId,
     isCreatingChat,
   ])
@@ -115,13 +131,17 @@ function UsernameChatComponent() {
     )
   }
 
-  // Show loading while creating chat
-  if (isCreatingChat || !chatId) {
+  // Show loading while finding or creating chat
+  if (existingChatId === undefined || (isCreatingChat && !chatId)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Starting chat with {username}...</p>
+          <p className="text-gray-600">
+            {existingChatId === undefined
+              ? `Finding chat with ${username}...`
+              : `Creating chat with ${username}...`}
+          </p>
         </div>
       </div>
     )

@@ -50,6 +50,122 @@ export const createChat = mutation({
   },
 })
 
+export const getPrivateChatWithUser = query({
+  args: {
+    otherUsername: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      return null
+    }
+
+    // Get current user's profile
+    const currentUserProfile = await ctx.db
+      .query('profiles')
+      .withIndex('by_userId', (q) =>
+        q.eq('userId', getUserIdfromAuthIdentity(identity)),
+      )
+      .first()
+
+    if (!currentUserProfile) {
+      return null
+    }
+
+    // Find the other user's profile
+    const otherUserProfile = await ctx.db
+      .query('profiles')
+      .withIndex('by_username', (q) => q.eq('username', args.otherUsername))
+      .first()
+
+    if (!otherUserProfile) {
+      return null
+    }
+
+    // Check if private chat already exists between these users
+    const userChats = await ctx.db
+      .query('chat_members')
+      .withIndex('by_userId', (q) => q.eq('userId', currentUserProfile._id))
+      .collect()
+
+    for (const membership of userChats) {
+      const chat = await ctx.db.get(membership.chatId)
+      if (chat && chat.type === 'private') {
+        // Check if this private chat includes the other user
+        const otherMembership = await ctx.db
+          .query('chat_members')
+          .withIndex('by_chatId', (q) => q.eq('chatId', chat._id))
+          .filter((q) => q.eq(q.field('userId'), otherUserProfile._id))
+          .first()
+
+        if (otherMembership) {
+          return chat._id // Private chat already exists
+        }
+      }
+    }
+
+    return null // No private chat found
+  },
+})
+
+export const createPrivateChat = mutation({
+  args: {
+    otherUsername: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      throw new Error('Not authenticated')
+    }
+
+    // Get current user's profile
+    const currentUserProfile = await ctx.db
+      .query('profiles')
+      .withIndex('by_userId', (q) =>
+        q.eq('userId', getUserIdfromAuthIdentity(identity)),
+      )
+      .first()
+
+    if (!currentUserProfile) {
+      throw new Error('User profile not found')
+    }
+
+    // Find the other user's profile
+    const otherUserProfile = await ctx.db
+      .query('profiles')
+      .withIndex('by_username', (q) => q.eq('username', args.otherUsername))
+      .first()
+
+    if (!otherUserProfile) {
+      throw new Error('User not found')
+    }
+
+    // Create new private chat
+    const timestamp = Date.now()
+    const chatId = await ctx.db.insert('chats', {
+      type: 'private',
+      createdBy: currentUserProfile._id,
+      createdAt: timestamp,
+      lastMessageAt: timestamp,
+    })
+
+    // Add both users to the chat
+    await ctx.db.insert('chat_members', {
+      chatId,
+      userId: currentUserProfile._id,
+      joinedAt: timestamp,
+    })
+
+    await ctx.db.insert('chat_members', {
+      chatId,
+      userId: otherUserProfile._id,
+      joinedAt: timestamp,
+    })
+
+    return chatId
+  },
+})
+
 export const getOrCreatePrivateChat = mutation({
   args: {
     otherUsername: v.string(),

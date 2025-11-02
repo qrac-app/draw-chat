@@ -11,4 +11,4 @@ export const useStableQuery = ((name, ...args) => {
   }
 
   return stableResult.current
-}) as typeof useQuery;
+}) as typeof useQuery
