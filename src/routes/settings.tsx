@@ -44,7 +44,7 @@ function SettingsComponent() {
   }
 
   if (!isAuthenticated) {
-    window.location.href = '/login'
+    navigate({ to: '/login' })
     return null
   }
 

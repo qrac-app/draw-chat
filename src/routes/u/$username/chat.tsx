@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useMutation } from 'convex/react'
 import { api } from '../../../../convex/_generated/api'
 import { useAuth } from '@/hooks/useAuth'
@@ -10,6 +10,7 @@ export const Route = createFileRoute('/u/$username/chat')({
 
 function UsernameChatComponent() {
   const { username } = Route.useParams()
+  const router = useRouter()
   const { isAuthenticated, hasProfile, isLoading, user } = useAuth()
   const createOrGetPrivateChat = useMutation(api.chats.getOrCreatePrivateChat)
   const [error, setError] = useState<string | null>(null)
@@ -17,8 +18,8 @@ function UsernameChatComponent() {
   const handleStartChat = async () => {
     try {
       const chatId = await createOrGetPrivateChat({ otherUsername: username })
-      // Redirect to the actual chat
-      window.location.href = `/chat/${chatId}`
+      // Navigate to the actual chat using router
+      router.navigate({ to: '/chat/$chatId', params: { chatId } })
     } catch (err) {
       console.error('Failed to start chat:', err)
       setError('Failed to start chat. Please make sure the username exists.')
@@ -51,13 +52,13 @@ function UsernameChatComponent() {
 
   if (!isAuthenticated) {
     // Redirect to login if not authenticated
-    window.location.href = '/login'
+    router.navigate({ to: '/login' })
     return null
   }
 
   if (!hasProfile) {
     // Redirect to profile setup if user doesn't have a profile
-    window.location.href = '/profile'
+    router.navigate({ to: '/profile' })
     return null
   }
 
@@ -88,7 +89,7 @@ function UsernameChatComponent() {
         <div className="text-center">
           <p className="text-red-600">{error}</p>
           <button
-            onClick={() => window.history.back()}
+            onClick={() => router.history.back()}
             className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           >
             Go Back

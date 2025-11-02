@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
 import ChatsList from '../components/ChatsList'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -7,6 +7,7 @@ export const Route = createFileRoute('/chats')({
 })
 
 function ChatsComponent() {
+  const router = useRouter()
   const { isAuthenticated, hasProfile, isLoading } = useAuth()
 
   if (isLoading) {
@@ -22,13 +23,13 @@ function ChatsComponent() {
 
   if (!isAuthenticated) {
     // Redirect to login if not authenticated
-    window.location.href = '/login'
+    router.navigate({ to: '/login' })
     return null
   }
 
   if (!hasProfile) {
     // Redirect to profile setup if user doesn't have a profile
-    window.location.href = '/profile'
+    router.navigate({ to: '/profile' })
     return null
   }
 
