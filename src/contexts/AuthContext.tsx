@@ -1,8 +1,8 @@
 import React, { createContext, useContext } from 'react'
 import { useAuthActions } from '@convex-dev/auth/react'
-import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
+import { useStableQuery } from '@/hooks/useStableQuery'
 
 interface User {
   userId: Id<'users'>
@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { signIn, signOut } = useAuthActions()
 
   // Get current user from our custom query
-  const authData = useQuery(api.currentUser.currentUser)
+  const authData = useStableQuery(api.currentUser.currentUser)
 
   const isAuthenticated = !!authData?.isAuthenticated
   const hasProfile = !!authData?.profile

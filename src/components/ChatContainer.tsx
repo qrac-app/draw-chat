@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { useMutation, useQuery } from 'convex/react'
+import { useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import MessageBubble from './MessageBubble'
 import MessageInput from './MessageInput'
 import type { Id } from '../../convex/_generated/dataModel'
 import { useAuth } from '@/hooks/useAuth'
+import { useStableQuery } from '@/hooks/useStableQuery'
 
 interface ChatContainerProps {
   chatId?: Id<'chats'>
@@ -19,17 +20,22 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
   const currentUser = user
 
   // Get user settings for default input method
-  const userSettings = useQuery(
+  const userSettings = useStableQuery(
     api.userSettings.getUserSettings,
     user?.userId ? { userId: user.userId } : 'skip',
   )
 
   // If no chatId provided, use legacy global chat
-  const legacyMessages = useQuery(api.messages.list) || []
+  const legacyMessages = useStableQuery(api.messages.list) || []
   const chatMessages =
-    useQuery(api.chatMessages.getChatMessages, chatId ? { chatId } : 'skip') ||
-    []
-  const chat = useQuery(api.chats.getChatById, chatId ? { chatId } : 'skip')
+    useStableQuery(
+      api.chatMessages.getChatMessages,
+      chatId ? { chatId } : 'skip',
+    ) || []
+  const chat = useStableQuery(
+    api.chats.getChatById,
+    chatId ? { chatId } : 'skip',
+  )
 
   const messages = chatId ? chatMessages : legacyMessages
   const sendMessage = useMutation(
