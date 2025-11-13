@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useMutation, useQuery, useSuspenseQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from '../../convex/_generated/api'
 import MessageBubble from './MessageBubble'
@@ -9,14 +9,14 @@ import { useAuth } from '@/hooks/useAuth'
 import { useFileUpload } from '@/hooks/useFileUpload'
 
 interface ChatContainerProps {
-  chatId: Id<'chats'>
+  chatId: Id<'chats'> | null | undefined
 }
 
 export default function ChatContainer({ chatId }: ChatContainerProps) {
   const { user } = useAuth()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [isSending, setIsSending] = useState(false)
-  const { uploadFile, isUploading, error: uploadError } = useFileUpload()
+  const { uploadFile, isUploading } = useFileUpload()
 
   // Use authenticated user data or fallback
   const currentUser = user
@@ -29,13 +29,16 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
     ),
   })
 
-  const { data: chatMessages = [] } = useSuspenseQuery({
-    ...convexQuery(api.chatMessages.getChatMessages, { chatId }),
+  const { data: chatMessages = [] } = useQuery({
+    ...convexQuery(
+      api.chatMessages.getChatMessages,
+      chatId ? { chatId } : 'skip',
+    ),
     initialData: [],
   })
 
-  const { data: chat } = useSuspenseQuery({
-    ...convexQuery(api.chats.getChatById, { chatId }),
+  const { data: chat } = useQuery({
+    ...convexQuery(api.chats.getChatById, chatId ? { chatId } : 'skip'),
   })
 
   const messages = chatMessages
