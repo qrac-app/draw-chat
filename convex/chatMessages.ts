@@ -129,13 +129,81 @@ export const sendChatMessage = mutation({
     // Update the chat's last message info
     const chat = await ctx.db.get(args.chatId)
     if (chat) {
+      // Generate appropriate preview based on message type
+      let preview: string
+      if (args.type === 'drawing') {
+        preview = 'Drawing'
+      } else if (args.type === 'attachment') {
+        preview = 'Attachment'
+      } else {
+        preview = args.content.slice(0, 100)
+      }
+
       await ctx.db.patch(args.chatId, {
         lastMessageAt: timestamp,
-        lastMessagePreview: args.content.slice(0, 100), // Preview for chat list
+        lastMessagePreview: preview,
       })
     }
 
     return messageId
+  },
+})
+
+export const fixMessagePreviews = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      throw new Error('Not authenticated')
+    }
+
+    // Get current user's profile
+    const currentUserProfile = await ctx.db
+      .query('profiles')
+      .withIndex('by_userId', (q) =>
+        q.eq('userId', getUserIdfromAuthIdentity(identity)),
+      )
+      .first()
+
+    if (!currentUserProfile) {
+      throw new Error('User profile not found')
+    }
+
+    // Get all chats the user is a member of
+    const memberships = await ctx.db
+      .query('chat_members')
+      .withIndex('by_userId', (q) => q.eq('userId', currentUserProfile._id))
+      .collect()
+
+    for (const membership of memberships) {
+      // Get the most recent message for this chat
+      const lastMessage = await ctx.db
+        .query('chat_messages')
+        .withIndex('by_chatId_timestamp', (q) =>
+          q.eq('chatId', membership.chatId),
+        )
+        .order('desc')
+        .first()
+
+      if (lastMessage) {
+        // Generate appropriate preview based on message type
+        let preview: string
+        if (lastMessage.type === 'drawing') {
+          preview = 'Drawing'
+        } else if (lastMessage.type === 'attachment') {
+          preview = 'Attachment'
+        } else {
+          preview = lastMessage.content.slice(0, 100)
+        }
+
+        // Update the chat's preview
+        await ctx.db.patch(membership.chatId, {
+          lastMessagePreview: preview,
+        })
+      }
+    }
+
+    return { success: true }
   },
 })
 
