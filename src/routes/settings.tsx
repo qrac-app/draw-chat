@@ -16,6 +16,7 @@ function SettingsComponent() {
   const [defaultInputMethod, setDefaultInputMethod] = useState<
     'keyboard' | 'canvas'
   >('keyboard')
+  const [sendOnPenUp, setSendOnPenUp] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const getUserSettings = useQuery(
@@ -28,6 +29,7 @@ function SettingsComponent() {
   useEffect(() => {
     if (getUserSettings) {
       setDefaultInputMethod(getUserSettings.defaultInputMethod)
+      setSendOnPenUp(getUserSettings.sendOnPenUp)
     }
   }, [getUserSettings])
 
@@ -114,6 +116,7 @@ function SettingsComponent() {
       await updateUserSettings({
         userId: user.userId,
         defaultInputMethod,
+        sendOnPenUp,
       })
       navigate({ to: '/chats' })
     } catch (error) {
@@ -193,6 +196,31 @@ function SettingsComponent() {
                     </div>
                   </div>
                 </div>
+              </label>
+            </div>
+          </div>
+
+          {/* Drawing Settings */}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Drawing Settings
+            </h2>
+            <div className="space-y-3">
+              <label className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-colors">
+                <div>
+                  <div className="font-medium text-gray-900">
+                    Send on pen up
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Automatically send drawing when you lift your pen/finger
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={sendOnPenUp}
+                  onChange={(e) => setSendOnPenUp(e.target.checked)}
+                  className="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                />
               </label>
             </div>
           </div>

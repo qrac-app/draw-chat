@@ -4,14 +4,19 @@ import type { MouseEvent, TouchEvent } from 'react'
 interface DrawingCanvasProps {
   onDrawingComplete: (dataUrl: string) => void
   className?: string
+  sendOnPenUp?: boolean
+  onPenUp?: (dataUrl: string) => void
 }
 
 export default function DrawingCanvas({
   onDrawingComplete,
   className = '',
+  sendOnPenUp = false,
+  onPenUp,
 }: DrawingCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
+  const [hasDrawn, setHasDrawn] = useState(false)
   const [color, setColor] = useState('#000000')
   const [lineWidth, setLineWidth] = useState(2)
 
@@ -41,6 +46,7 @@ export default function DrawingCanvas({
     if (!ctx) return
 
     setIsDrawing(true)
+    setHasDrawn(false) // Reset hasDrawn when starting new drawing
 
     const rect = canvas.getBoundingClientRect()
     let x, y
@@ -84,10 +90,31 @@ export default function DrawingCanvas({
     ctx.lineWidth = lineWidth
     ctx.lineTo(x, y)
     ctx.stroke()
+
+    // Mark that user has actually drawn something
+    setHasDrawn(true)
   }
 
   const stopDrawing = () => {
     setIsDrawing(false)
+
+    // Auto-send on pen up if enabled, callback is provided, and user actually drew something
+    if (sendOnPenUp && onPenUp && hasDrawn) {
+      const canvas = canvasRef.current
+      if (canvas) {
+        const dataUrl = canvas.toDataURL('image/png')
+        onPenUp(dataUrl)
+      }
+    }
+
+    // Reset hasDrawn after checking
+    setHasDrawn(false)
+  }
+
+  const handleMouseLeave = () => {
+    // Stop drawing but don't auto-send when mouse leaves canvas
+    setIsDrawing(false)
+    setHasDrawn(false)
   }
 
   const clearCanvas = () => {
@@ -98,6 +125,7 @@ export default function DrawingCanvas({
     if (!ctx) return
 
     ctx.clearRect(0, 0, canvas.width, canvas.height)
+    setHasDrawn(false) // Reset drawing state when clearing
   }
 
   const getCanvasData = () => {
@@ -168,7 +196,7 @@ export default function DrawingCanvas({
         onMouseDown={startDrawing}
         onMouseMove={draw}
         onMouseUp={stopDrawing}
-        onMouseLeave={stopDrawing}
+        onMouseLeave={handleMouseLeave}
         onTouchStart={startDrawing}
         onTouchMove={draw}
         onTouchEnd={stopDrawing}

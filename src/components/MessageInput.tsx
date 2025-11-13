@@ -1,5 +1,14 @@
 import { useRef, useState } from 'react'
-import { Edit, Paperclip, Send, Type } from 'lucide-react'
+import {
+  Edit,
+  Paperclip,
+  Send,
+  ToggleLeft,
+  ToggleRight,
+  Type,
+} from 'lucide-react'
+import { useQuery } from 'convex/react'
+import { api } from '../../convex/_generated/api'
 import DrawingCanvas from './DrawingCanvas'
 import FileUpload from './FileUpload'
 import type { Id } from '../../convex/_generated/dataModel'
@@ -13,6 +22,7 @@ interface MessageInputProps {
   onFileUpload?: (file: File) => Promise<Id<'attachments'> | null>
   disabled?: boolean
   defaultInputMethod?: 'keyboard' | 'canvas'
+  userId?: string
 }
 
 export default function MessageInput({
@@ -20,6 +30,7 @@ export default function MessageInput({
   onFileUpload,
   disabled = false,
   defaultInputMethod = 'keyboard',
+  userId,
 }: MessageInputProps) {
   const [inputMode, setInputMode] = useState<'text' | 'drawing'>(
     defaultInputMethod === 'canvas' ? 'drawing' : 'text',
@@ -30,7 +41,16 @@ export default function MessageInput({
   const [userExplicitlyChoseText, setUserExplicitlyChoseText] = useState(false)
   const [showFileUpload, setShowFileUpload] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [tempSendOnPenUp, setTempSendOnPenUp] = useState<boolean | null>(null)
   const textInputRef = useRef<HTMLInputElement>(null)
+
+  // Get user settings for sendOnPenUp
+  const userSettings = useQuery(
+    api.userSettings.getUserSettings,
+    userId ? { userId: userId as Id<'users'> } : 'skip',
+  )
+  const effectiveSendOnPenUp =
+    tempSendOnPenUp ?? userSettings?.sendOnPenUp ?? true
 
   // Auto-switch to canvas mode when input is focused and default is canvas
   // Only auto-switch if user hasn't explicitly chosen text mode
@@ -83,6 +103,18 @@ export default function MessageInput({
   const handleDrawingComplete = (dataUrl: string) => {
     setDrawingData(dataUrl)
     setInputMode('text')
+    // Reset temporary sendOnPenUp state after drawing is complete
+    setTempSendOnPenUp(null)
+  }
+
+  const handleAutoSendDrawing = (dataUrl: string) => {
+    // Optimistic update: immediately close canvas and reset state
+    setTempSendOnPenUp(null)
+    setInputMode('text')
+    setDrawingData(null)
+
+    // Send the drawing (fire and forget for optimistic update)
+    onSendMessage(dataUrl, 'drawing')
   }
 
   const handleSendDrawing = () => {
@@ -96,6 +128,8 @@ export default function MessageInput({
     setInputMode('drawing')
     setDrawingData(null)
     setUserExplicitlyChoseText(false)
+    // Reset temporary state when entering drawing mode
+    setTempSendOnPenUp(null)
   }
 
   const switchToTextMode = () => {
@@ -111,20 +145,48 @@ export default function MessageInput({
     setShowFileUpload(!showFileUpload)
   }
 
+  const toggleSendOnPenUp = () => {
+    setTempSendOnPenUp(!effectiveSendOnPenUp)
+  }
+
   if (inputMode === 'drawing') {
     return (
       <div className="border-t border-gray-200 p-4">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-lg font-semibold">Draw a message</h3>
-          <button
-            onClick={switchToTextMode}
-            className="flex items-center gap-2 px-3 py-1 text-gray-600 hover:text-gray-800"
-          >
-            <Type size={16} />
-            Switch to text
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleSendOnPenUp}
+              className="flex items-center gap-2 px-3 py-1 text-gray-600 hover:text-gray-800"
+              title={
+                effectiveSendOnPenUp
+                  ? 'Send on pen up is ON'
+                  : 'Send on pen up is OFF'
+              }
+            >
+              {effectiveSendOnPenUp ? (
+                <ToggleRight size={16} />
+              ) : (
+                <ToggleLeft size={16} />
+              )}
+              <span className="text-sm">
+                {effectiveSendOnPenUp ? 'Auto-send ON' : 'Auto-send OFF'}
+              </span>
+            </button>
+            <button
+              onClick={switchToTextMode}
+              className="flex items-center gap-2 px-3 py-1 text-gray-600 hover:text-gray-800"
+            >
+              <Type size={16} />
+              Switch to text
+            </button>
+          </div>
         </div>
-        <DrawingCanvas onDrawingComplete={handleDrawingComplete} />
+        <DrawingCanvas
+          onDrawingComplete={handleDrawingComplete}
+          sendOnPenUp={effectiveSendOnPenUp}
+          onPenUp={effectiveSendOnPenUp ? handleAutoSendDrawing : undefined}
+        />
       </div>
     )
   }

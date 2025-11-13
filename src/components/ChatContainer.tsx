@@ -42,7 +42,8 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
     ...convexQuery(api.chats.getChatById, chatId ? { chatId } : 'skip'),
   })
 
-  const messages = chatMessages
+  const [optimisticMessages, setOptimisticMessages] = useState<Array<any>>([])
+  const messages = [...optimisticMessages, ...chatMessages]
   const { mutate: sendMessage, isPending: isSendingMutation } = useMutation({
     mutationFn: useConvexMutation(
       chatId ? api.chatMessages.sendChatMessage : api.messages.send,
@@ -65,6 +66,22 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
     if (isSending || isSendingMutation || !currentUser) return
 
     setIsSending(true)
+
+    // Create optimistic message
+    const optimisticMessage = {
+      _id: `optimistic-${Date.now()}` as Id<'chat_messages'>,
+      chatId: chatId || '',
+      senderId: currentUser.userId,
+      content,
+      type,
+      attachmentId,
+      timestamp: Date.now(),
+      _creationTime: Date.now(),
+    }
+
+    // Add optimistic message immediately
+    setOptimisticMessages((prev) => [...prev, optimisticMessage])
+
     try {
       if (type === 'attachment') {
         // Handle file upload
@@ -101,6 +118,10 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
       console.error('Failed to send message:', error)
     } finally {
       setIsSending(false)
+      // Remove optimistic messages after a short delay (to allow real message to sync)
+      setTimeout(() => {
+        setOptimisticMessages([])
+      }, 2000)
     }
   }
 
@@ -201,6 +222,7 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
         onFileUpload={uploadFile}
         disabled={isSending || isSendingMutation || isUploading}
         defaultInputMethod={userSettings?.defaultInputMethod || 'keyboard'}
+        userId={user?.userId}
       />
     </div>
   )

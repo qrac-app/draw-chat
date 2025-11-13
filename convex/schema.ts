@@ -77,5 +77,6 @@ export default defineSchema({
   userSettings: defineTable({
     userId: v.id('users'),
     defaultInputMethod: v.union(v.literal('keyboard'), v.literal('canvas')),
+    sendOnPenUp: v.boolean(),
   }).index('by_userId', ['userId']),
 })

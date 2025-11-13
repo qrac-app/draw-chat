@@ -10,7 +10,9 @@ export const getUserSettings = query({
       .first()
 
     // Return default settings if none exist
-    return settings || { defaultInputMethod: 'keyboard' as const }
+    return (
+      settings || { defaultInputMethod: 'keyboard' as const, sendOnPenUp: true }
+    )
   },
 })
 
@@ -18,6 +20,7 @@ export const updateUserSettings = mutation({
   args: {
     userId: v.id('users'),
     defaultInputMethod: v.union(v.literal('keyboard'), v.literal('canvas')),
+    sendOnPenUp: v.boolean(),
   },
   handler: async (ctx, args) => {
     const existingSettings = await ctx.db
@@ -28,11 +31,13 @@ export const updateUserSettings = mutation({
     if (existingSettings) {
       return await ctx.db.patch(existingSettings._id, {
         defaultInputMethod: args.defaultInputMethod,
+        sendOnPenUp: args.sendOnPenUp,
       })
     } else {
       return await ctx.db.insert('userSettings', {
         userId: args.userId,
         defaultInputMethod: args.defaultInputMethod,
+        sendOnPenUp: args.sendOnPenUp,
       })
     }
   },
