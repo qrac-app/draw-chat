@@ -1,15 +1,18 @@
+import { useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Settings } from 'lucide-react'
+import { Search, Settings } from 'lucide-react'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from '../../convex/_generated/api'
 import { useAuth } from '@/hooks/useAuth'
+import { Input } from '@/components/ui/input'
 
 export default function ChatsList() {
   const { user } = useAuth()
   const { data: chats, isLoading } = useQuery({
     ...convexQuery(api.chats.getUserChats, {}),
   })
+  const [searchQuery, setSearchQuery] = useState('')
 
   const getChatTitle = (chat: any) => {
     if (chat.type === 'private' && chat.members.length === 2) {
@@ -20,6 +23,16 @@ export default function ChatsList() {
     }
     return chat.name || 'Group Chat'
   }
+
+  const filteredChats = useMemo(() => {
+    if (!chats || !searchQuery.trim()) return chats
+
+    const query = searchQuery.toLowerCase()
+    return chats.filter((chat) => {
+      const chatTitle = getChatTitle(chat)
+      return chatTitle.toLowerCase().includes(query)
+    })
+  }, [chats, searchQuery, user?.userId])
 
   const getInitials = (name: string) => {
     return name
@@ -92,6 +105,23 @@ export default function ChatsList() {
           </div>
         </div>
 
+        {/* Search box */}
+        <div className="px-4 py-3 border-b border-gray-100">
+          <div className="relative">
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              size={18}
+            />
+            <Input
+              type="text"
+              placeholder="Search chats or start a new one..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+
         {/* Skeleton items */}
         <div className="divide-y divide-gray-100">
           {[1, 2, 3, 4, 5].map((item) => (
@@ -116,19 +146,59 @@ export default function ChatsList() {
     )
   }
 
-  if (chats !== undefined && chats.length === 0) {
+  if (chats !== undefined && chats.length === 0 && !searchQuery.trim()) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
-            <span className="text-2xl text-gray-400">💬</span>
+      <div className="min-h-screen bg-white">
+        {/* Mobile-style header */}
+        <div className="bg-white border-b border-gray-100 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-semibold text-gray-900">Chats</h1>
+            <Link
+              to="/settings"
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <Settings size={20} className="text-gray-600" />
+            </Link>
           </div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">
-            No chats yet
-          </h2>
-          <p className="text-gray-600">
-            Start a conversation to see it appear here
-          </p>
+        </div>
+
+        {/* Search box */}
+        <div className="px-4 py-3 border-b border-gray-100">
+          <div className="relative">
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              size={18}
+            />
+            <Input
+              type="text"
+              placeholder="Search chats or start a new one..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+
+        {/* Empty state */}
+        <div className="flex items-center justify-center px-4 py-16">
+          <div className="text-center max-w-sm">
+            <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full mx-auto mb-6 flex items-center justify-center shadow-sm">
+              <span className="text-3xl">💬</span>
+            </div>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-3">
+              No chats yet
+            </h2>
+            <p className="text-gray-600 mb-6 leading-relaxed">
+              Start a conversation by searching for a username above, or your
+              chats will appear here once you have some.
+            </p>
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <p className="text-sm text-gray-500 mb-2">💡 Tip:</p>
+              <p className="text-sm text-gray-600">
+                Type a username in the search box to start a new chat!
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -137,6 +207,68 @@ export default function ChatsList() {
   // If chats is still undefined (loading), don't render anything
   if (!chats) {
     return null
+  }
+
+  // Show no results state when search has no matches
+  if (searchQuery.trim() && filteredChats && filteredChats.length === 0) {
+    return (
+      <div className="min-h-screen bg-white">
+        {/* Mobile-style header */}
+        <div className="bg-white border-b border-gray-100 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-semibold text-gray-900">Chats</h1>
+            <Link
+              to="/settings"
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <Settings size={20} className="text-gray-600" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Search box */}
+        <div className="px-4 py-3 border-b border-gray-100">
+          <div className="relative">
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              size={18}
+            />
+            <Input
+              type="text"
+              placeholder="Search chats or start a new one..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+
+        {/* No results */}
+        <div className="flex items-center justify-center px-4 py-12">
+          <div className="text-center max-w-sm">
+            <div className="w-16 h-16 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <Search size={24} className="text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No chats found
+            </h3>
+            <p className="text-gray-600 mb-6">
+              No existing chats match "{searchQuery}"
+            </p>
+            <Link
+              to="/u/$username/chat"
+              params={{ username: searchQuery.trim() }}
+              className="inline-flex items-center justify-center rounded-lg text-sm font-medium h-10 px-6 bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              Start chat with {searchQuery.trim()}
+            </Link>
+            <p className="text-xs text-gray-500 mt-3">
+              or try searching for something else
+            </p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -154,8 +286,25 @@ export default function ChatsList() {
         </div>
       </div>
 
+      {/* Search box */}
+      <div className="px-4 py-3 border-b border-gray-100">
+        <div className="relative">
+          <Search
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+            size={18}
+          />
+          <Input
+            type="text"
+            placeholder="Search chats or start a new one..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
       <div className="divide-y divide-gray-100">
-        {chats.map((chat) => {
+        {(filteredChats || chats).map((chat) => {
           const chatTitle = getChatTitle(chat)
           const avatarInitials = getInitials(chatTitle)
           const avatarColor = getAvatarColor(chatTitle)
