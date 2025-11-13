@@ -1,14 +1,8 @@
 import { useRef, useState } from 'react'
-import {
-  Edit,
-  Paperclip,
-  Send,
-  ToggleLeft,
-  ToggleRight,
-  Type,
-} from 'lucide-react'
+import { Edit, Paperclip, Send, Type } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
+import { Switch } from './ui/switch'
 import DrawingCanvas from './DrawingCanvas'
 import FileUpload from './FileUpload'
 import type { Id } from '../../convex/_generated/dataModel'
@@ -155,24 +149,20 @@ export default function MessageInput({
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-lg font-semibold">Draw a message</h3>
           <div className="flex items-center gap-2">
-            <button
-              onClick={toggleSendOnPenUp}
-              className="flex items-center gap-2 px-3 py-1 text-gray-600 hover:text-gray-800"
-              title={
-                effectiveSendOnPenUp
-                  ? 'Send on pen up is ON'
-                  : 'Send on pen up is OFF'
-              }
-            >
-              {effectiveSendOnPenUp ? (
-                <ToggleRight size={16} />
-              ) : (
-                <ToggleLeft size={16} />
-              )}
-              <span className="text-sm">
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={effectiveSendOnPenUp}
+                onCheckedChange={toggleSendOnPenUp}
+                title={
+                  effectiveSendOnPenUp
+                    ? 'Send on pen up is ON'
+                    : 'Send on pen up is OFF'
+                }
+              />
+              <span className="text-sm text-gray-600">
                 {effectiveSendOnPenUp ? 'Auto-send ON' : 'Auto-send OFF'}
               </span>
-            </button>
+            </div>
             <button
               onClick={switchToTextMode}
               className="flex items-center gap-2 px-3 py-1 text-gray-600 hover:text-gray-800"
