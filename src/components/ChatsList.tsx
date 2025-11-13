@@ -79,6 +79,7 @@ export default function ChatsList() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-white">
+        {/* Header */}
         <div className="bg-white border-b border-gray-100 px-4 py-3">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-semibold text-gray-900">Chats</h1>
@@ -90,14 +91,32 @@ export default function ChatsList() {
             </Link>
           </div>
         </div>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-gray-400">Loading...</div>
+
+        {/* Skeleton items */}
+        <div className="divide-y divide-gray-100">
+          {[1, 2, 3, 4, 5].map((item) => (
+            <div key={item} className="flex items-center px-4 py-3">
+              {/* Avatar skeleton */}
+              <div className="flex-shrink-0 mr-3">
+                <div className="w-14 h-14 bg-gray-200 rounded-full animate-pulse"></div>
+              </div>
+
+              {/* Content skeleton */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="h-5 w-32 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-3 w-12 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="h-4 w-48 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     )
   }
 
-  if (!chats || chats.length === 0) {
+  if (chats !== undefined && chats.length === 0) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
@@ -113,6 +132,11 @@ export default function ChatsList() {
         </div>
       </div>
     )
+  }
+
+  // If chats is still undefined (loading), don't render anything
+  if (!chats) {
+    return null
   }
 
   return (

@@ -30,7 +30,7 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
     ),
   })
 
-  const { data: chatMessages = [] } = useQuery({
+  const { data: chatMessages = [], isLoading: isMessagesLoading } = useQuery({
     ...convexQuery(
       api.chatMessages.getChatMessages,
       chatId ? { chatId } : 'skip',
@@ -38,7 +38,7 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
     initialData: [],
   })
 
-  const { data: chat } = useQuery({
+  const { data: chat, isLoading: isChatLoading } = useQuery({
     ...convexQuery(api.chats.getChatById, chatId ? { chatId } : 'skip'),
   })
 
@@ -151,7 +151,15 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
-        {messages.length === 0 ? (
+        {isMessagesLoading || isChatLoading ? (
+          // Spinner for loading messages
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-gray-500 text-sm">Loading messages...</p>
+            </div>
+          </div>
+        ) : messages.length === 0 ? (
           <div className="text-center text-gray-500 mt-8">
             <p className="text-lg mb-2">
               {chatId ? 'Start the conversation!' : 'Welcome to Drawing Chat!'}
