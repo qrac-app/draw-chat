@@ -5,6 +5,7 @@ import ConvexProvider from '../integrations/convex/provider'
 import appCss from '../styles.css?url'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { MessagesProvider } from '@/contexts/MessagesContext'
+import { ChatCacheProvider } from '@/contexts/ChatCacheContext'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -40,7 +41,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body>
         <ConvexProvider>
           <AuthProvider>
-            <MessagesProvider>{children}</MessagesProvider>
+            <ChatCacheProvider>
+              <MessagesProvider>{children}</MessagesProvider>
+            </ChatCacheProvider>
           </AuthProvider>
           {/* <TanStackDevtools
             config={{

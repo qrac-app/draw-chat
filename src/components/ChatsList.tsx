@@ -7,11 +7,13 @@ import { convexQuery } from '@convex-dev/react-query'
 import { api } from '../../convex/_generated/api'
 import { useAuth } from '@/hooks/useAuth'
 import { useMessages } from '@/contexts/MessagesContext'
+import { useChatCache } from '@/contexts/ChatCacheContext'
 import { Input } from '@/components/ui/input'
 
 export default function ChatsList() {
   const { user } = useAuth()
   const { setMessages } = useMessages()
+  const { setChatCache } = useChatCache()
   const queryClient = useQueryClient()
   const updateChatPreviews = useMutation(api.chats.updateChatPreviews)
   const { data: chats, isLoading } = useQuery({
@@ -19,9 +21,12 @@ export default function ChatsList() {
   })
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Update chat previews on component mount for chats that don't have them
+  // Update chat cache and previews on component mount
   useEffect(() => {
     if (chats && chats.length > 0) {
+      // Populate chat cache
+      setChatCache(chats)
+
       const chatsWithoutPreviews = chats.filter(
         (chat) => !chat.lastMessagePreview,
       )
@@ -52,7 +57,7 @@ export default function ChatsList() {
           })
       })
     }
-  }, [chats, updateChatPreviews, queryClient, setMessages])
+  }, [chats, updateChatPreviews, queryClient, setMessages, setChatCache])
 
   const getChatTitle = (chat: any) => {
     if (chat.type === 'private' && chat.members.length === 2) {

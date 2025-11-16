@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useMutation } from 'convex/react'
-import { useSuspenseQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
 import { api } from '../../../../convex/_generated/api'
 import ChatContainer from '../../../components/ChatContainer'
 import type { Id } from '../../../../convex/_generated/dataModel'
 import { useAuth } from '@/hooks/useAuth'
+import { useChatCache } from '@/contexts/ChatCacheContext'
 
 export const Route = createFileRoute('/u/$username/chat')({
   component: UsernameChatComponent,
@@ -16,6 +15,7 @@ function UsernameChatComponent() {
   const { username } = Route.useParams()
   const router = useRouter()
   const { isAuthenticated, hasProfile, isLoading, user } = useAuth()
+  const { getChatIdByUsername, addChat } = useChatCache()
   const getOrCreatePrivateChat = useMutation(api.chats.getOrCreatePrivateChat)
   const [error, setError] = useState<string | null>(null)
   const [chatId, setChatId] = useState<Id<'chats'> | null>(null)
@@ -24,8 +24,14 @@ function UsernameChatComponent() {
   const handleGetOrCreateChat = async () => {
     try {
       setIsCreatingChat(true)
-      const id = await getOrCreatePrivateChat({ otherUsername: username })
-      setChatId(id)
+      const result = await getOrCreatePrivateChat({ otherUsername: username })
+
+      // If this is a new chat, add it to cache
+      if (result.chat && result.isNew) {
+        addChat(result.chat)
+      }
+
+      setChatId(result.chatId || result)
     } catch (err) {
       console.error('Failed to get or create chat:', err)
       setError('Failed to create chat. Please make sure the username exists.')
@@ -34,12 +40,18 @@ function UsernameChatComponent() {
     }
   }
 
-  // Get or create chat when user is ready
+  // Check cache first, then get or create chat when user is ready
   useEffect(() => {
     if (hasProfile && !chatId && !isCreatingChat) {
-      handleGetOrCreateChat()
+      // First check if we have the chat ID in cache
+      const cachedChatId = getChatIdByUsername(username)
+      if (cachedChatId) {
+        setChatId(cachedChatId)
+      } else {
+        handleGetOrCreateChat()
+      }
     }
-  }, [username, hasProfile, chatId, isCreatingChat])
+  }, [username, hasProfile, chatId, isCreatingChat, getChatIdByUsername])
 
   if (isLoading) {
     return (
