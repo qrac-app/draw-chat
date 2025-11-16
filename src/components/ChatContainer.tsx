@@ -24,7 +24,7 @@ export default function ChatContainer({
   const { user } = useAuth()
   const { getMessages, addMessage } = useMessages()
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [isSending, setIsSending] = useState(false)
+
   const [isFirstLoad, setIsFirstLoad] = useState(true)
   const { uploadFile, isUploading } = useFileUpload()
 
@@ -135,9 +135,7 @@ export default function ChatContainer({
     type: 'text' | 'drawing' | 'attachment',
     attachmentId?: Id<'attachments'>,
   ) => {
-    if (isSending || !currentUser) return
-
-    setIsSending(true)
+    if (!currentUser) return
 
     try {
       if (type === 'attachment') {
@@ -173,8 +171,6 @@ export default function ChatContainer({
       }
     } catch (error) {
       console.error('Failed to send message:', error)
-    } finally {
-      setIsSending(false)
     }
   }
 
@@ -334,7 +330,7 @@ export default function ChatContainer({
       <MessageInput
         onSendMessage={handleSendMessage}
         onFileUpload={uploadFile}
-        disabled={isSending || isUploading}
+        disabled={isUploading}
         defaultInputMethod={userSettings?.defaultInputMethod || 'keyboard'}
         userId={user?.userId}
       />
