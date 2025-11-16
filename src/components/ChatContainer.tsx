@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
+import { useMutation, useQuery } from 'convex/react'
 import { ArrowLeft } from 'lucide-react'
 import { api } from '../../convex/_generated/api'
 import MessageBubble from './MessageBubble'
@@ -23,31 +22,87 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
   const currentUser = user
 
   // Get user settings for default input method
-  const { data: userSettings } = useQuery({
-    ...convexQuery(
-      api.userSettings.getUserSettings,
-      user?.userId ? { userId: user.userId } : 'skip',
-    ),
-  })
+  const userSettings = useQuery(
+    api.userSettings.getUserSettings,
+    user?.userId ? { userId: user.userId } : 'skip',
+  )
 
-  const { data: chatMessages = [], isLoading: isMessagesLoading } = useQuery({
-    ...convexQuery(
-      api.chatMessages.getChatMessages,
-      chatId ? { chatId } : 'skip',
-    ),
-    initialData: [],
-  })
+  const chatMessages = useQuery(
+    api.chatMessages.getChatMessages,
+    chatId ? { chatId } : 'skip',
+  )
 
-  const { data: chat, isLoading: isChatLoading } = useQuery({
-    ...convexQuery(api.chats.getChatById, chatId ? { chatId } : 'skip'),
-  })
+  const chat = useQuery(api.chats.getChatById, chatId ? { chatId } : 'skip')
 
-  const [optimisticMessages, setOptimisticMessages] = useState<Array<any>>([])
-  const messages = [...optimisticMessages, ...chatMessages]
-  const { mutate: sendMessage, isPending: isSendingMutation } = useMutation({
-    mutationFn: useConvexMutation(
-      chatId ? api.chatMessages.sendChatMessage : api.messages.send,
-    ),
+  const globalMessages = useQuery(api.messages.list)
+
+  const messages = chatId ? (chatMessages ?? []) : (globalMessages ?? [])
+  const isLoading = chatId
+    ? chatMessages === undefined
+    : globalMessages === undefined
+
+  const sendMessage = useMutation(
+    chatId ? api.chatMessages.sendChatMessage : api.messages.send,
+  ).withOptimisticUpdate((localStore, args) => {
+    if (chatId) {
+      // Chat message optimistic update
+      const existingMessages = localStore.getQuery(
+        api.chatMessages.getChatMessages,
+        {
+          chatId,
+        },
+      )
+      if (existingMessages !== undefined) {
+        const now = Date.now()
+        const optimisticMessage = {
+          _id: crypto.randomUUID() as Id<'chat_messages'>,
+          chatId,
+          senderId: currentUser?.userId
+            ? ('temp' as Id<'profiles'>)
+            : ('temp' as Id<'profiles'>),
+          content: args.content,
+          type: args.type,
+          attachmentId: (args as any).attachmentId,
+          timestamp: now,
+          _creationTime: now,
+          sender: {
+            _id: currentUser?.userId
+              ? ('temp' as Id<'profiles'>)
+              : ('temp' as Id<'profiles'>),
+            userId: currentUser?.userId || ('temp' as Id<'users'>),
+            displayName: currentUser?.displayName || 'Unknown',
+            username: currentUser?.username || 'unknown',
+            email: currentUser?.email || '',
+            _creationTime: now,
+          },
+          attachment: null,
+          attachmentUrl: null,
+        }
+        localStore.setQuery(api.chatMessages.getChatMessages, { chatId }, [
+          ...existingMessages,
+          optimisticMessage,
+        ])
+      }
+    } else {
+      // Global message optimistic update
+      const existingMessages = localStore.getQuery(api.messages.list)
+      if (existingMessages !== undefined) {
+        const now = Date.now()
+        const optimisticMessage = {
+          _id: crypto.randomUUID() as Id<'messages'>,
+          content: args.content,
+          type: args.type === 'attachment' ? 'text' : args.type,
+          author: currentUser?.displayName || 'Unknown',
+          timestamp: now,
+          _creationTime: now,
+        }
+        localStore.setQuery(
+          api.messages.list,
+          [],
+          [...existingMessages, optimisticMessage],
+        )
+      }
+    }
   })
 
   const scrollToBottom = () => {
@@ -58,29 +113,14 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
     scrollToBottom()
   }, [messages])
 
-  const handleSendMessage = (
+  const handleSendMessage = async (
     content: string,
     type: 'text' | 'drawing' | 'attachment',
     attachmentId?: Id<'attachments'>,
   ) => {
-    if (isSending || isSendingMutation || !currentUser) return
+    if (isSending || !currentUser) return
 
     setIsSending(true)
-
-    // Create optimistic message
-    const optimisticMessage = {
-      _id: `optimistic-${Date.now()}` as Id<'chat_messages'>,
-      chatId: chatId || '',
-      senderId: currentUser.userId,
-      content,
-      type,
-      attachmentId,
-      timestamp: Date.now(),
-      _creationTime: Date.now(),
-    }
-
-    // Add optimistic message immediately
-    setOptimisticMessages((prev) => [...prev, optimisticMessage])
 
     try {
       if (type === 'attachment') {
@@ -91,7 +131,7 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
         }
 
         if (chatId) {
-          sendMessage({
+          await sendMessage({
             chatId,
             content,
             type,
@@ -101,13 +141,13 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
       } else {
         // Handle text and drawing messages
         if (chatId) {
-          sendMessage({
+          await sendMessage({
             chatId,
             content,
             type,
           })
         } else {
-          sendMessage({
+          await sendMessage({
             content,
             type,
             author: currentUser.displayName,
@@ -118,10 +158,6 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
       console.error('Failed to send message:', error)
     } finally {
       setIsSending(false)
-      // Remove optimistic messages after a short delay (to allow real message to sync)
-      setTimeout(() => {
-        setOptimisticMessages([])
-      }, 2000)
     }
   }
 
@@ -172,7 +208,7 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
-        {isMessagesLoading || isChatLoading ? (
+        {isLoading ? (
           // Spinner for loading messages
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
@@ -220,7 +256,7 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
       <MessageInput
         onSendMessage={handleSendMessage}
         onFileUpload={uploadFile}
-        disabled={isSending || isSendingMutation || isUploading}
+        disabled={isSending || isUploading}
         defaultInputMethod={userSettings?.defaultInputMethod || 'keyboard'}
         userId={user?.userId}
       />
