@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMutation } from 'convex/react'
 import { Search, Settings } from 'lucide-react'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from '../../convex/_generated/api'
 import { useAuth } from '@/hooks/useAuth'
+import { useMessages } from '@/contexts/MessagesContext'
 import { Input } from '@/components/ui/input'
 
 export default function ChatsList() {
   const { user } = useAuth()
+  const { setMessages } = useMessages()
+  const queryClient = useQueryClient()
   const updateChatPreviews = useMutation(api.chats.updateChatPreviews)
   const { data: chats, isLoading } = useQuery({
     ...convexQuery(api.chats.getUserChats, {}),
@@ -25,8 +28,31 @@ export default function ChatsList() {
       if (chatsWithoutPreviews.length > 0) {
         updateChatPreviews()
       }
+
+      // Prefetch recent messages for all chats
+      chats.forEach((chat) => {
+        queryClient.prefetchQuery({
+          ...convexQuery(api.chatMessages.getChatMessages, {
+            chatId: chat._id,
+          }),
+        })
+
+        // Also fetch and store in context for immediate access
+        queryClient
+          .fetchQuery({
+            ...convexQuery(api.chatMessages.getChatMessages, {
+              chatId: chat._id,
+            }),
+          })
+          .then((messages) => {
+            setMessages(chat._id, messages)
+          })
+          .catch(() => {
+            // Ignore errors during prefetch
+          })
+      })
     }
-  }, [chats, updateChatPreviews])
+  }, [chats, updateChatPreviews, queryClient, setMessages])
 
   const getChatTitle = (chat: any) => {
     if (chat.type === 'private' && chat.members.length === 2) {

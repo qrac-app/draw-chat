@@ -2,7 +2,7 @@
 
 ## Commands
 
-- `pnpm dev` - Start development server on port 3000
+- \[DO NOT USE\] `pnpm dev` - Start development server on port 3000
 - `pnpm build` - Build for production
 - `pnpm test` - Run all tests with Vitest
 - `pnpm test <filename>` - Run single test file

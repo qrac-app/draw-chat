@@ -34,5 +34,5 @@ function ChatComponent() {
     return null
   }
 
-  return <ChatContainer chatId={chatId as any} />
+  return <ChatContainer chatId={chatId as any} chatType="group" />
 }

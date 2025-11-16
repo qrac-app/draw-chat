@@ -8,13 +8,21 @@ import MessagePagination from './MessagePagination'
 import type { Id } from '../../convex/_generated/dataModel'
 import { useAuth } from '@/hooks/useAuth'
 import { useFileUpload } from '@/hooks/useFileUpload'
+import { useMessages } from '@/contexts/MessagesContext'
 
 interface ChatContainerProps {
   chatId: Id<'chats'> | null | undefined
+  username?: string
+  chatType?: 'private' | 'group' | 'global'
 }
 
-export default function ChatContainer({ chatId }: ChatContainerProps) {
+export default function ChatContainer({
+  chatId,
+  username,
+  chatType,
+}: ChatContainerProps) {
   const { user } = useAuth()
+  const { getMessages, addMessage } = useMessages()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [isSending, setIsSending] = useState(false)
   const { uploadFile, isUploading } = useFileUpload()
@@ -29,6 +37,9 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
   )
 
   const chat = useQuery(api.chats.getChatById, chatId ? { chatId } : 'skip')
+
+  // Check for preloaded messages in context first
+  const preloadedMessages = chatId ? getMessages(chatId) : undefined
 
   const globalMessages = useQuery(api.messages.list)
 
@@ -73,6 +84,9 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
           ...existingMessages,
           optimisticMessage,
         ])
+
+        // Also update the context
+        addMessage(chatId, optimisticMessage)
       }
     } else {
       // Global message optimistic update
@@ -153,8 +167,20 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
   }
 
   const getChatTitle = () => {
-    if (!chatId) return 'Drawing Chat'
-    if (!chat) return 'Chat'
+    // Use external data as fallback when chat data is not loaded
+    if (username) {
+      return username
+    }
+
+    if (!chatId && chatType === 'global') return 'Drawing Chat'
+    if (!chatId && !chat) return 'Chat'
+
+    if (!chat) {
+      // Use chatType from props as fallback
+      if (chatType === 'private') return 'Private Chat'
+      if (chatType === 'group') return 'Group Chat'
+      return 'Chat'
+    }
 
     if (chat.type === 'private' && chat.members.length === 2) {
       const otherMember = chat.members.find(
@@ -167,8 +193,20 @@ export default function ChatContainer({ chatId }: ChatContainerProps) {
   }
 
   const getChatSubtitle = () => {
-    if (!chatId) return 'Global chat room'
-    if (!chat) return ''
+    if (!chatId) {
+      // Use chatType from props as fallback
+      if (chatType === 'global') return 'Global chat room'
+      if (chatType === 'private') return 'Private conversation'
+      if (chatType === 'group') return 'Group chat'
+      return 'Global chat room'
+    }
+
+    if (!chat) {
+      // Use chatType from props as fallback
+      if (chatType === 'private') return 'Private conversation'
+      if (chatType === 'group') return 'Group chat'
+      return ''
+    }
 
     if (chat.type === 'group') {
       return `${chat.members.length} members`
