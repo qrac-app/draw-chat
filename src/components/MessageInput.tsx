@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Edit, Paperclip, Send, Type } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
@@ -37,6 +37,13 @@ export default function MessageInput({
   const [isUploading, setIsUploading] = useState(false)
   const [tempSendOnPenUp, setTempSendOnPenUp] = useState<boolean | null>(null)
   const textInputRef = useRef<HTMLInputElement>(null)
+
+  // Focus input on mount
+  useEffect(() => {
+    if (inputMode === 'text') {
+      textInputRef.current?.focus()
+    }
+  }, [])
 
   // Get user settings for sendOnPenUp
   const userSettings = useQuery(
