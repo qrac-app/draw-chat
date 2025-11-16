@@ -1,5 +1,5 @@
-- [ ] Open already loaded chat
-- [ ] PWA
+- [x] Open already loaded chat
+- [x] PWA
 - [ ] Import stickers
 
 - [ ] Themes

@@ -5,6 +5,6 @@ import { tanstackConfig } from '@tanstack/eslint-config'
 export default [
   ...tanstackConfig,
   {
-    ignores: ['convex/_generated/**'],
+    ignores: ['convex/_generated/**', 'public/**'],
   },
 ]
