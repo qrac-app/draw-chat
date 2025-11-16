@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
-import { useMessages } from '@/contexts/MessagesContext'
 
 interface MessagePaginationProps {
   chatId: Id<'chats'>
@@ -18,22 +17,17 @@ export default function MessagePagination({
   chatId,
   children,
 }: MessagePaginationProps) {
-  const { getMessages, setMessages } = useMessages()
   const [allMessages, setAllMessages] = useState<Array<any>>([])
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [nextCursor, setNextCursor] = useState<number | null>(null)
   const [initialized, setInitialized] = useState(false)
 
-  // Check for preloaded messages
-  const preloadedMessages = getMessages(chatId)
-  const hasPreloaded = preloadedMessages && preloadedMessages.length > 0
-
-  // Initial load query (only if no preloaded messages and not initialized)
-  const initialMessages = useQuery(
-    api.chatMessages.getChatMessagesPaginated,
-    !initialized && !hasPreloaded ? { chatId, limit: 10 } : 'skip',
-  )
+  // Initial load query (always query to get optimistic updates)
+  const initialMessages = useQuery(api.chatMessages.getChatMessagesPaginated, {
+    chatId,
+    limit: 10,
+  })
 
   // Load more messages query
   const olderMessages = useQuery(
@@ -45,30 +39,28 @@ export default function MessagePagination({
 
   // Initialize or reset when chatId changes
   useEffect(() => {
-    if (hasPreloaded) {
-      // Use preloaded messages
-      setAllMessages(preloadedMessages)
-      setHasMore(false)
-      setNextCursor(null)
-      setInitialized(true)
-    } else if (!initialized) {
+    if (!initialized) {
       // Will fetch fresh messages
       setAllMessages([])
       setHasMore(true)
       setNextCursor(null)
     }
-  }, [chatId, hasPreloaded, preloadedMessages, initialized])
+  }, [chatId, initialized])
 
   // Handle initial load from fresh fetch
   useEffect(() => {
-    if (initialMessages && !hasPreloaded && !initialized) {
+    if (initialMessages && !initialized) {
       setAllMessages(initialMessages.messages)
       setHasMore(initialMessages.hasMore)
       setNextCursor(initialMessages.nextCursor)
       setInitialized(true)
-      setMessages(chatId, initialMessages.messages)
+    } else if (initialMessages && initialized) {
+      // Update with latest data (includes optimistic updates)
+      setAllMessages(initialMessages.messages)
+      setHasMore(initialMessages.hasMore)
+      setNextCursor(initialMessages.nextCursor)
     }
-  }, [initialMessages, hasPreloaded, initialized, chatId, setMessages])
+  }, [initialMessages, initialized, chatId])
 
   // Handle loading more messages
   useEffect(() => {
@@ -86,8 +78,10 @@ export default function MessagePagination({
     }
   }, [hasMore, nextCursor, loadingMore])
 
-  const isLoading =
-    !initialized && !hasPreloaded && initialMessages === undefined
+  const isLoading = !initialized && initialMessages === undefined
+
+  // Use the messages from state
+  const displayMessages = allMessages
 
   if (isLoading) {
     return (
@@ -100,5 +94,5 @@ export default function MessagePagination({
     )
   }
 
-  return <>{children(allMessages, loadMore, hasMore, loadingMore)}</>
+  return <>{children(displayMessages, loadMore, hasMore, loadingMore)}</>
 }

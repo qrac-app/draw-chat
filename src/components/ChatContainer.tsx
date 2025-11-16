@@ -8,7 +8,6 @@ import MessagePagination from './MessagePagination'
 import type { Id } from '../../convex/_generated/dataModel'
 import { useAuth } from '@/hooks/useAuth'
 import { useFileUpload } from '@/hooks/useFileUpload'
-import { useMessages } from '@/contexts/MessagesContext'
 
 interface ChatContainerProps {
   chatId: Id<'chats'> | null | undefined
@@ -22,7 +21,6 @@ export default function ChatContainer({
   chatType,
 }: ChatContainerProps) {
   const { user } = useAuth()
-  const { addMessage } = useMessages()
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const [isFirstLoad, setIsFirstLoad] = useState(true)
@@ -58,11 +56,12 @@ export default function ChatContainer({
     chatId ? api.chatMessages.sendChatMessage : api.messages.send,
   ).withOptimisticUpdate((localStore, args) => {
     if (chatId) {
-      // Chat message optimistic update
+      // Chat message optimistic update for paginated query
       const existingMessages = localStore.getQuery(
-        api.chatMessages.getChatMessages,
+        api.chatMessages.getChatMessagesPaginated,
         {
           chatId,
+          limit: 10,
         },
       )
       if (existingMessages !== undefined) {
@@ -91,13 +90,19 @@ export default function ChatContainer({
           attachment: null,
           attachmentUrl: null,
         }
-        localStore.setQuery(api.chatMessages.getChatMessages, { chatId }, [
-          ...existingMessages,
-          optimisticMessage,
-        ])
+        localStore.setQuery(
+          api.chatMessages.getChatMessagesPaginated,
+          {
+            chatId,
+            limit: 10,
+          },
+          {
+            messages: [...existingMessages.messages, optimisticMessage],
+            hasMore: existingMessages.hasMore,
+            nextCursor: existingMessages.nextCursor,
+          },
+        )
 
-        // Also update the context
-        addMessage(chatId, optimisticMessage)
         setTimeout(() => {
           scrollToBottom()
         }, 50)
