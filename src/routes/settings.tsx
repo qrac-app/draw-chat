@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
-import { ArrowLeft, Edit3, Keyboard } from 'lucide-react'
+import { ArrowLeft, Edit3, Keyboard, LogOut } from 'lucide-react'
 import { api } from '../../convex/_generated/api'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ export const Route = createFileRoute('/settings')({
 
 function SettingsComponent() {
   const navigate = useNavigate()
-  const { user, isAuthenticated, isLoading } = useAuth()
+  const { user, isAuthenticated, isLoading, signOut } = useAuth()
   const [defaultInputMethod, setDefaultInputMethod] = useState<
     'keyboard' | 'canvas'
   >('keyboard')
@@ -222,6 +222,27 @@ function SettingsComponent() {
                   className="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                 />
               </label>
+            </div>
+          </div>
+
+          {/* Account Section */}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Account
+            </h2>
+            <div className="space-y-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  signOut()
+                  navigate({ to: '/login' })
+                }}
+                className="w-full justify-start border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </Button>
             </div>
           </div>
 
