@@ -41,7 +41,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body>
         <ConvexProvider>
           <AuthProvider>{children}</AuthProvider>
-          <TanStackDevtools
+          {/*<TanStackDevtools
             config={{
               position: 'bottom-right',
             }}
@@ -51,7 +51,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                 render: <TanStackRouterDevtoolsPanel />,
               },
             ]}
-          />
+          />*/}
         </ConvexProvider>
         <Scripts />
       </body>
